@@ -11,6 +11,7 @@ export function useFetch<T>(url: string, key: string) {
     const [data, setData] = useState<T | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isSlow, setIsSlow] = useState(false)
 
     const fetchData = async (force = false) => {
         // Check cache first
@@ -24,18 +25,28 @@ export function useFetch<T>(url: string, key: string) {
         }
 
         setLoading(true)
+        setIsSlow(false)
+        setError(null)
+
+        // Set a timer to mark request as slow after 5 seconds
+        const slowTimer = setTimeout(() => {
+            setIsSlow(true)
+        }, 5000)
+
         try {
             const res = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             cache.set(key, { data: res.data, timestamp: Date.now() })
             setData(res.data)
-            setError(null)
         } catch (err: any) {
             console.error(err)
             setError(err.message || 'Failed to fetch data')
         } finally {
+            clearTimeout(slowTimer)
             setLoading(false)
+            // Keep isSlow true if it finished but took long? No, reset it. 
+            // Actually, if it errored, we might want to show error. If it finished, isSlow is irrelevant.
         }
     }
 
@@ -46,5 +57,5 @@ export function useFetch<T>(url: string, key: string) {
     // Expose a mutate function to manually refresh
     const mutate = () => fetchData(true)
 
-    return { data, loading, error, mutate }
+    return { data, loading, error, isSlow, mutate }
 }

@@ -19,7 +19,7 @@ interface Student {
 
 export default function StudentRoster() {
   const { token } = useAuthStore()
-  const { data: students, loading, error, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'students')
+  const { data: students, loading, error, isSlow, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'students')
   
   // Modal States
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false)
@@ -179,8 +179,24 @@ export default function StudentRoster() {
         
         {loading ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                <p className="text-sm">Loading Roster...</p>
+                {isSlow ? (
+                    <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
+                        <Loader2 className="w-8 h-8 animate-spin mb-4 text-amber-500" />
+                        <p className="text-sm font-medium text-amber-600 mb-2">Connecting to server...</p>
+                        <p className="text-xs text-gray-400 max-w-xs text-center mb-4">This may take a moment if the server is waking up.</p>
+                        <button 
+                            onClick={() => mutate()}
+                            className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                        >
+                            Retry Connection
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <p className="text-sm">Loading Roster...</p>
+                    </>
+                )}
             </div>
         ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-red-500">
