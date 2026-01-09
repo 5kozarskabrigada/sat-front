@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-brand-dark: #001B4D;
+  --color-brand-primary: #002B7A;
+  --color-brand-accent: #007AFF;
+  --color-text-main: #FFFFFF;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-dark text-brand-secondary font-sans antialiased;
+  }
+  
+  /* High Contrast overrides for Accessibility */
+  input, textarea, select {
+    @apply text-black bg-white;
+  }
+}
+
+/* Custom Scrollbar for the "High Stakes" look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-brand-primary;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-brand-accent/50 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-brand-accent;
+}
