@@ -55,10 +55,10 @@ export function useFetch<T>(url: string, key: string) {
         setIsSlow(false)
         setError(null)
 
-        // Set a timer to mark request as slow after 5 seconds
+        // Set a timer to mark request as slow after 15 seconds (increased from 5s for slow servers)
         const slowTimer = setTimeout(() => {
             setIsSlow(true)
-        }, 5000)
+        }, 15000)
 
         try {
             const res = await axios.get(url, {
