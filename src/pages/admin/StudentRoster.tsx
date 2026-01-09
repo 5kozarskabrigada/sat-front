@@ -5,12 +5,14 @@ import { useAuthStore } from '../../store/authStore'
 import { useFetch } from '../../hooks/useFetch'
 import { Eye, EyeOff, UserPlus, Search, X, Check, Loader2, Edit2, Trash2, RefreshCw } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { ConfirmModal, Modal } from '../../components/Modals'
 
 interface Student {
   id: string
   firstName: string
   lastName: string
   username: string
+  plainPassword?: string // Added for MVP visibility
   role: string
   createdAt: string
 }
@@ -18,64 +20,109 @@ interface Student {
 export default function StudentRoster() {
   const { token } = useAuthStore()
   const { data: students, loading, error, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'students')
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // Modal States
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  
+  // Selection States
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [newStudentName, setNewStudentName] = useState({ first: '', last: '' })
+  const [editStudentData, setEditStudentData] = useState({ first: '', last: '' })
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([])
   const [resetCredentials, setResetCredentials] = useState<{id: string, password: string} | null>(null)
+  
+  // Loading States for Actions
+  const [actionLoading, setActionLoading] = useState(false)
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set())
+
+  const togglePasswordVisibility = (id: string) => {
+      setVisiblePasswords(prev => {
+          const next = new Set(prev)
+          if (next.has(id)) next.delete(id)
+          else next.add(id)
+          return next
+      })
+  }
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault()
+    setActionLoading(true)
     try {
       const res = await axios.post(`${API_URL}/api/admin/create-students`, [
         { firstName: newStudentName.first, lastName: newStudentName.last }
       ], {
         headers: { Authorization: `Bearer ${token}` }
       })
-      // Optimistic update
-      const newStudents = res.data.map((creds: any, idx: number) => ({
-          id: `temp-${Date.now()}-${idx}`, // Temp ID until refresh
-          firstName: newStudentName.first,
-          lastName: newStudentName.last,
-          username: creds.username,
-          role: 'student',
-          createdAt: new Date().toISOString()
-      }))
-      // Note: useFetch doesn't support optimistic updates directly without SWR/React Query, 
-      // but we can rely on 'mutate()' to fetch the real data.
+      
       setCreatedCredentials(prev => [...prev, ...res.data])
       setNewStudentName({ first: '', last: '' })
-      mutate() // Refresh list immediately
-      setIsModalOpen(false)
+      mutate()
+      setIsEnrollModalOpen(false)
     } catch (err) {
       console.error(err)
+    } finally {
+      setActionLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
-      if (!confirm('Are you sure you want to delete this student? All their exam data will be lost.')) return
+  const handleDelete = async () => {
+      if (!selectedStudent) return
+      setActionLoading(true)
       try {
-          await axios.delete(`${API_URL}/api/admin/students/${id}`, {
+          await axios.delete(`${API_URL}/api/admin/students/${selectedStudent.id}`, {
               headers: { Authorization: `Bearer ${token}` }
           })
           mutate()
+          setIsDeleteModalOpen(false)
       } catch (err) {
           console.error(err)
           alert('Failed to delete student')
+      } finally {
+          setActionLoading(false)
       }
   }
 
-  const handleResetPassword = async (id: string) => {
-      if (!confirm('Regenerate password for this student? The old password will stop working.')) return
+  const handleEdit = async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!selectedStudent) return
+      setActionLoading(true)
       try {
-          const res = await axios.post(`${API_URL}/api/admin/students/${id}/reset-password`, {}, {
+          await axios.put(`${API_URL}/api/admin/students/${selectedStudent.id}`, {
+              firstName: editStudentData.first,
+              lastName: editStudentData.last
+          }, {
               headers: { Authorization: `Bearer ${token}` }
           })
-          setResetCredentials({ id, password: res.data.password })
+          mutate()
+          setIsEditModalOpen(false)
+      } catch (err) {
+          console.error(err)
+          alert('Failed to update student')
+      } finally {
+          setActionLoading(false)
+      }
+  }
+
+  const handleResetPassword = async () => {
+      if (!selectedStudent) return
+      setActionLoading(true)
+      try {
+          const res = await axios.post(`${API_URL}/api/admin/students/${selectedStudent.id}/reset-password`, {}, {
+              headers: { Authorization: `Bearer ${token}` }
+          })
+          setResetCredentials({ id: selectedStudent.id, password: res.data.password })
           // Auto-hide after 10s
           setTimeout(() => setResetCredentials(null), 10000)
+          setIsResetModalOpen(false)
+          mutate() // Refresh to get the new plain password if API returns it
       } catch (err) {
           console.error(err)
           alert('Failed to reset password')
+      } finally {
+          setActionLoading(false)
       }
   }
 
@@ -85,7 +132,7 @@ export default function StudentRoster() {
     if (!el) return null
     return createPortal(
       <button 
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => setIsEnrollModalOpen(true)}
         className="flex items-center gap-2 bg-brand-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
       >
         <UserPlus className="w-4 h-4" />
@@ -157,6 +204,7 @@ export default function StudentRoster() {
                 // Check if we just created this student to show the password
                 const creds = createdCredentials.find(c => c.username === student.username)
                 const resetCreds = resetCredentials?.id === student.id ? resetCredentials : null
+                const isPasswordVisible = visiblePasswords.has(student.id)
                 
                 return (
                     <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
@@ -183,22 +231,51 @@ export default function StudentRoster() {
                                     <span className="font-bold">{resetCreds.password}</span>
                                     <Check className="w-3 h-3" />
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-2 text-gray-400 italic text-sm">
-                                    <span>••••••••</span>
+                            ) : student.plainPassword ? (
+                                <div className="flex items-center gap-2 text-sm">
+                                    {isPasswordVisible ? (
+                                        <span className="font-mono font-bold text-brand-dark">{student.plainPassword}</span>
+                                    ) : (
+                                        <span className="text-gray-400">••••••••</span>
+                                    )}
+                                    <button 
+                                        onClick={() => togglePasswordVisibility(student.id)}
+                                        className="text-gray-400 hover:text-brand-accent transition-colors"
+                                    >
+                                        {isPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
                                 </div>
+                            ) : (
+                                <div className="text-xs text-gray-400 italic">Hidden</div>
                             )}
                         </td>
                         <td className="px-6 py-4 flex items-center gap-2">
                             <button 
-                                onClick={() => handleResetPassword(student.id)}
+                                onClick={() => {
+                                    setSelectedStudent(student)
+                                    setEditStudentData({ first: student.firstName, last: student.lastName })
+                                    setIsEditModalOpen(true)
+                                }}
                                 className="p-1.5 text-gray-400 hover:text-brand-accent hover:bg-blue-50 rounded transition-colors"
+                                title="Edit Student"
+                            >
+                                <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setSelectedStudent(student)
+                                    setIsResetModalOpen(true)
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors"
                                 title="Reset Password"
                             >
                                 <RefreshCw className="w-4 h-4" />
                             </button>
                             <button 
-                                onClick={() => handleDelete(student.id)}
+                                onClick={() => {
+                                    setSelectedStudent(student)
+                                    setIsDeleteModalOpen(true)
+                                }}
                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                 title="Delete Student"
                             >
@@ -213,64 +290,129 @@ export default function StudentRoster() {
         )}
       </div>
 
-      {/* Enrollment Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-brand-dark/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-brand-dark">Enroll New Student</h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <form onSubmit={handleEnroll} className="p-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-brand-muted uppercase mb-1">First Name</label>
-                            <input 
-                                required
-                                value={newStudentName.first}
-                                onChange={e => setNewStudentName(p => ({ ...p, first: e.target.value }))}
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
-                                placeholder="Jane"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-brand-muted uppercase mb-1">Last Name</label>
-                            <input 
-                                required
-                                value={newStudentName.last}
-                                onChange={e => setNewStudentName(p => ({ ...p, last: e.target.value }))}
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
-                                placeholder="Doe"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 flex gap-2">
-                        <div className="shrink-0 mt-0.5"><Check className="w-4 h-4" /></div>
-                        <p>Credentials will be auto-generated upon enrollment. Be sure to copy the password immediately.</p>
-                    </div>
+      {/* Modals */}
+      <ConfirmModal 
+          isOpen={isDeleteModalOpen} 
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
+          title="Delete Student"
+          message={`Are you sure you want to delete ${selectedStudent?.firstName} ${selectedStudent?.lastName}? This action cannot be undone and will remove all their exam data.`}
+          confirmText="Delete Student"
+          confirmColor="red"
+          loading={actionLoading}
+      />
 
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button 
-                            type="button" 
-                            onClick={() => setIsModalOpen(false)}
-                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit"
-                            className="px-4 py-2 bg-brand-accent text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
-                        >
-                            Confirm Enrollment
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-      )}
+      <ConfirmModal 
+          isOpen={isResetModalOpen} 
+          onClose={() => setIsResetModalOpen(false)}
+          onConfirm={handleResetPassword}
+          title="Reset Password"
+          message={`This will generate a new password for ${selectedStudent?.username}. The old password will stop working immediately.`}
+          confirmText="Generate New Password"
+          loading={actionLoading}
+      />
+
+      {/* Edit Modal */}
+      <Modal 
+          isOpen={isEditModalOpen} 
+          onClose={() => setIsEditModalOpen(false)}
+          title="Edit Student Details"
+      >
+          <form onSubmit={handleEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-xs font-bold text-brand-muted uppercase mb-1">First Name</label>
+                      <input 
+                          required
+                          value={editStudentData.first}
+                          onChange={e => setEditStudentData(p => ({ ...p, first: e.target.value }))}
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs font-bold text-brand-muted uppercase mb-1">Last Name</label>
+                      <input 
+                          required
+                          value={editStudentData.last}
+                          onChange={e => setEditStudentData(p => ({ ...p, last: e.target.value }))}
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
+                      />
+                  </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                  <button 
+                      type="button" 
+                      onClick={() => setIsEditModalOpen(false)}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors text-sm"
+                  >
+                      Cancel
+                  </button>
+                  <button 
+                      type="submit"
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-brand-accent text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm text-sm flex items-center gap-2"
+                  >
+                      {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Save Changes
+                  </button>
+              </div>
+          </form>
+      </Modal>
+
+      {/* Enrollment Modal */}
+      <Modal 
+          isOpen={isEnrollModalOpen} 
+          onClose={() => setIsEnrollModalOpen(false)}
+          title="Enroll New Student"
+      >
+          <form onSubmit={handleEnroll} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-xs font-bold text-brand-muted uppercase mb-1">First Name</label>
+                      <input 
+                          required
+                          value={newStudentName.first}
+                          onChange={e => setNewStudentName(p => ({ ...p, first: e.target.value }))}
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
+                          placeholder="Jane"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs font-bold text-brand-muted uppercase mb-1">Last Name</label>
+                      <input 
+                          required
+                          value={newStudentName.last}
+                          onChange={e => setNewStudentName(p => ({ ...p, last: e.target.value }))}
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none"
+                          placeholder="Doe"
+                      />
+                  </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 flex gap-2">
+                  <div className="shrink-0 mt-0.5"><Check className="w-4 h-4" /></div>
+                  <p>Credentials will be auto-generated upon enrollment. Be sure to copy the password immediately.</p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                  <button 
+                      type="button" 
+                      onClick={() => setIsEnrollModalOpen(false)}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors text-sm"
+                  >
+                      Cancel
+                  </button>
+                  <button 
+                      type="submit"
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-brand-accent text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm text-sm flex items-center gap-2"
+                  >
+                      {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Confirm Enrollment
+                  </button>
+              </div>
+          </form>
+      </Modal>
     </div>
   )
 }
