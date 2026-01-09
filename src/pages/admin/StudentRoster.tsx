@@ -38,6 +38,7 @@ export default function StudentRoster() {
   // Loading States for Actions
   const [actionLoading, setActionLoading] = useState(false)
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set())
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   const togglePasswordVisibility = (id: string) => {
       setVisiblePasswords(prev => {
@@ -115,10 +116,9 @@ export default function StudentRoster() {
               headers: { Authorization: `Bearer ${token}` }
           })
           setResetCredentials({ id: selectedStudent.id, password: res.data.password })
-          // Auto-hide after 10s
-          setTimeout(() => setResetCredentials(null), 10000)
           setIsResetModalOpen(false)
-          mutate() // Refresh to get the new plain password if API returns it
+          setShowPasswordModal(true) // Open permanent modal
+          mutate() // Refresh in background
       } catch (err) {
           console.error(err)
           alert('Failed to reset password')
@@ -178,7 +178,7 @@ export default function StudentRoster() {
             </div>
         </div>
         
-        {loading ? (
+        {loading && !students ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 {isSlow ? (
                     <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
@@ -339,6 +339,47 @@ export default function StudentRoster() {
           confirmText="Generate New Password"
           loading={actionLoading}
       />
+
+      {/* Success Modal for Password */}
+      <Modal
+          isOpen={showPasswordModal}
+          onClose={() => setShowPasswordModal(false)}
+          title="Password Reset Successful"
+      >
+          <div className="text-center space-y-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+                  <Check className="w-6 h-6" />
+              </div>
+              <p className="text-sm text-gray-600">
+                  A new password has been generated for <strong>{selectedStudent?.username}</strong>.
+                  <br/>Please copy it now as it cannot be retrieved later.
+              </p>
+              
+              <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 flex items-center justify-between">
+                  <span className="font-mono text-lg font-bold text-gray-900 tracking-wide">
+                      {resetCredentials?.password}
+                  </span>
+                  <button 
+                      onClick={() => {
+                          navigator.clipboard.writeText(resetCredentials?.password || '')
+                          alert('Copied to clipboard!')
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                  >
+                      Copy
+                  </button>
+              </div>
+
+              <div className="pt-2">
+                  <button 
+                      onClick={() => setShowPasswordModal(false)}
+                      className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                  >
+                      Done
+                  </button>
+              </div>
+          </div>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal 
