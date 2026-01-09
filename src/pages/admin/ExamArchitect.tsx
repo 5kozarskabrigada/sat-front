@@ -6,7 +6,7 @@ import { useAuthStore } from '../../store/authStore'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { 
     ChevronLeft, Save, Plus, Trash2, Layout, FileText, 
-    CheckCircle2, X, MoreVertical, Settings 
+    CheckCircle2, X, MoreVertical, Settings, Loader2
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -20,13 +20,6 @@ interface Question {
     correctAnswer: string
     explanation?: string
     difficulty?: string
-    // In a real app, passage would be separate, but here we assume it's part of the question text or a separate field 
-    // depending on the backend model. The backend model currently has "QuestionText" and "ChoicesJson".
-    // I'll simulate a "Passage" field by splitting the QuestionText if needed, or adding a field.
-    // For now, I'll stick to the backend model: QuestionText. 
-    // I'll assume the admin types the passage AND question in the text area, OR I treat "QuestionText" as the prompt
-    // and maybe "Explanation" as the passage? No, that's for after.
-    // I'll just use QuestionText for everything for now to match the backend.
 }
 
 interface ExamDetails {
@@ -50,6 +43,7 @@ export default function ExamArchitect() {
     // Editor State
     const [editorState, setEditorState] = useState<Question | null>(null)
     const [isDirty, setIsDirty] = useState(false)
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         fetchExam()
@@ -61,10 +55,6 @@ export default function ExamArchitect() {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setExam(res.data)
-            // Select first question if available
-            if (res.data.questions.length > 0) {
-                // setSelectedQuestionId(res.data.questions[0].id)
-            }
         } catch (err) {
             console.error(err)
         } finally {
@@ -90,6 +80,7 @@ export default function ExamArchitect() {
 
     const handleSave = async () => {
         if (!editorState || !selectedQuestionId) return
+        setSaving(true)
         try {
             // Update local state first for responsiveness
             setExam(prev => {
@@ -117,6 +108,8 @@ export default function ExamArchitect() {
         } catch (err) {
             console.error(err)
             alert('Failed to save question')
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -183,16 +176,17 @@ export default function ExamArchitect() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <span className={clsx("text-xs font-medium transition-opacity", isDirty ? "text-amber-600 opacity-100" : "opacity-0")}>
+                    <span className={clsx("text-xs font-medium transition-opacity flex items-center gap-1", isDirty ? "text-amber-600 opacity-100" : "opacity-0")}>
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                         Unsaved Changes
                     </span>
                     <button 
                         onClick={handleSave}
-                        disabled={!isDirty}
-                        className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        disabled={!isDirty || saving}
+                        className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                     >
-                        <Save className="w-4 h-4" />
-                        Save Changes
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                 </div>
             </header>
