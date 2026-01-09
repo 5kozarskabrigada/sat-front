@@ -249,15 +249,17 @@ export default function StudentRoster() {
                                     <Check className="w-3 h-3" />
                                 </div>
                             ) : student.plainPassword ? (
-                                <div className="flex items-center gap-2 text-sm">
+                                <div 
+                                    className="flex items-center gap-2 text-sm cursor-pointer group"
+                                    onClick={() => togglePasswordVisibility(student.id)}
+                                >
                                     {isPasswordVisible ? (
                                         <span className="font-mono font-bold text-brand-dark">{student.plainPassword}</span>
                                     ) : (
-                                        <span className="text-gray-400">••••••••</span>
+                                        <span className="text-gray-400 group-hover:text-brand-accent transition-colors">••••••••</span>
                                     )}
                                     <button 
-                                        onClick={() => togglePasswordVisibility(student.id)}
-                                        className="text-gray-400 hover:text-brand-accent transition-colors"
+                                        className="text-gray-400 group-hover:text-brand-accent transition-colors"
                                     >
                                         {isPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
