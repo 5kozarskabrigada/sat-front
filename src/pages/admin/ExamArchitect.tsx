@@ -11,6 +11,20 @@ import {
 import clsx from 'clsx'
 
 // Types
+interface QuestionSummary {
+    id: string
+    section: string
+    module: number
+    questionTextSnippet: string
+}
+
+interface ExamStructure {
+    id: string
+    title: string
+    code: string
+    questions: QuestionSummary[]
+}
+
 interface Question {
     id: string
     section: string
@@ -20,13 +34,6 @@ interface Question {
     correctAnswer: string
     explanation?: string
     difficulty?: string
-}
-
-interface ExamDetails {
-    id: string
-    title: string
-    code: string
-    questions: Question[]
 }
 
 export default function ExamArchitect() {
@@ -43,6 +50,7 @@ export default function ExamArchitect() {
     
     // Editor State
     const [editorState, setEditorState] = useState<Question | null>(null)
+    const [loadingQuestion, setLoadingQuestion] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
     const [saving, setSaving] = useState(false)
 
@@ -53,18 +61,13 @@ export default function ExamArchitect() {
     const fetchStructure = async () => {
         setLoading(true)
         setLoadingError(false)
-        
-        // Timeout safeguard
-        const timeoutId = setTimeout(() => {
-            if (loading) setLoadingError(true)
-        }, 15000)
+        const timeoutId = setTimeout(() => { if (loading) setLoadingError(true) }, 15000)
 
         try {
-            // Use lightweight structure endpoint for fast initial load
             const res = await axios.get(`${API_URL}/api/admin/exams/${examId}/structure`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            setStructure(res.data) // Assuming backend returns matching shape
+            setStructure(res.data)
             clearTimeout(timeoutId)
         } catch (err) {
             console.error(err)
@@ -74,36 +77,52 @@ export default function ExamArchitect() {
         }
     }
 
+    // Load question details when selected
+    useEffect(() => {
+        if (!selectedQuestionId) {
+            setEditorState(null)
+            return
+        }
+
+        const fetchQuestion = async () => {
+            setLoadingQuestion(true)
+            try {
+                const res = await axios.get(`${API_URL}/api/admin/questions/${selectedQuestionId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                setEditorState(res.data)
+                setIsDirty(false)
+            } catch (err) {
+                console.error(err)
+                alert('Failed to load question details')
+            } finally {
+                setLoadingQuestion(false)
+            }
+        }
+        fetchQuestion()
+    }, [selectedQuestionId])
+
     // Filter questions for the hierarchy
-    const filteredQuestions = exam?.questions.filter(q => 
+    const filteredQuestions = structure?.questions.filter(q => 
         q.section === activeSection && q.module === activeModule
     ) || []
-
-    // Load question into editor
-    useEffect(() => {
-        if (selectedQuestionId && exam) {
-            const q = exam.questions.find(q => q.id === selectedQuestionId)
-            if (q) setEditorState(JSON.parse(JSON.stringify(q))) // Deep copy
-            setIsDirty(false)
-        } else {
-            setEditorState(null)
-        }
-    }, [selectedQuestionId, exam])
 
     const handleSave = async () => {
         if (!editorState || !selectedQuestionId) return
         setSaving(true)
         try {
-            // Update local state first for responsiveness
-            setExam(prev => {
+            // Optimistic update of the snippet in the sidebar
+            setStructure(prev => {
                 if (!prev) return null
                 return {
                     ...prev,
-                    questions: prev.questions.map(q => q.id === selectedQuestionId ? editorState : q)
+                    questions: prev.questions.map(q => q.id === selectedQuestionId ? {
+                        ...q, 
+                        questionTextSnippet: editorState.questionText.substring(0, 50) + (editorState.questionText.length > 50 ? "..." : "")
+                    } : q)
                 }
             })
 
-            // Send to API
             await axios.put(`${API_URL}/api/admin/questions/${selectedQuestionId}`, {
                 section: editorState.section,
                 module: editorState.module,
@@ -126,7 +145,7 @@ export default function ExamArchitect() {
     }
 
     const handleAddQuestion = async () => {
-        if (!exam) return
+        if (!structure) return
         const newQuestion = {
             section: activeSection,
             module: activeModule,
@@ -138,12 +157,10 @@ export default function ExamArchitect() {
         }
 
         try {
-            // Backend expects a LIST of questions to add.
-            // I'll send one.
             await axios.post(`${API_URL}/api/admin/exams/${examId}/questions`, [newQuestion], {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            fetchStructure() // Refresh to get the ID
+            fetchStructure() // Refresh structure to get the new ID
         } catch (err) {
             console.error(err)
         }
@@ -156,7 +173,7 @@ export default function ExamArchitect() {
             await axios.delete(`${API_URL}/api/admin/questions/${selectedQuestionId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            setExam(prev => prev ? ({...prev, questions: prev.questions.filter(q => q.id !== selectedQuestionId)}) : null)
+            setStructure(prev => prev ? ({...prev, questions: prev.questions.filter(q => q.id !== selectedQuestionId)}) : null)
             setSelectedQuestionId(null)
         } catch (err) {
             console.error(err)
