@@ -282,7 +282,7 @@ export default function StudentRoster() {
                                     setSelectedStudent(student)
                                     setIsResetModalOpen(true)
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors"
+                                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors group relative"
                                 title="Reset Password"
                             >
                                 <RefreshCw className="w-4 h-4" />
@@ -292,7 +292,7 @@ export default function StudentRoster() {
                                     setSelectedStudent(student)
                                     setIsDeleteModalOpen(true)
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                className="p-1.5 text-red-400 hover:text-white hover:bg-red-500 rounded transition-colors shadow-sm border border-transparent hover:border-red-600"
                                 title="Delete Student"
                             >
                                 <Trash2 className="w-4 h-4" />
