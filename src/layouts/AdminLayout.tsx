@@ -13,8 +13,8 @@ export default function AdminLayout() {
 
   // Prefetch data on mount to hide latency
   useEffect(() => {
-    prefetch(`${API_URL}/api/admin/students`, 'students', token)
-    prefetch(`${API_URL}/api/admin/exams`, 'exams', token)
+    prefetch(`${API_URL}/api/admin/students`, 'admin-students', token)
+    prefetch(`${API_URL}/api/admin/exams`, 'admin-exams', token)
   }, [token])
 
   const handleLogout = () => {

@@ -17,7 +17,8 @@ interface Exam {
 export default function ExamLibrary() {
   const { token } = useAuthStore()
   const navigate = useNavigate()
-  const { data: exams, loading, error, mutate } = useFetch<Exam[]>(`${API_URL}/api/admin/exams`, 'exams')
+  // Key matches Login.tsx prefetch
+  const { data: exams, loading, error, mutate } = useFetch<Exam[]>(`${API_URL}/api/admin/exams`, 'admin-exams')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newExam, setNewExam] = useState({ title: '', code: '' })
 

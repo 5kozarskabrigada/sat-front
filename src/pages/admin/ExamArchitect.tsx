@@ -61,7 +61,7 @@ export default function ExamArchitect() {
     const fetchStructure = async () => {
         setLoading(true)
         setLoadingError(false)
-        const timeoutId = setTimeout(() => { if (loading) setLoadingError(true) }, 15000)
+        const timeoutId = setTimeout(() => { setLoadingError(true) }, 15000)
 
         try {
             const res = await axios.get(`${API_URL}/api/admin/exams/${examId}/structure`, {

@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { API_URL } from '../config'
 import { ShieldCheck, ArrowRight } from 'lucide-react'
+import { prefetch } from '../hooks/useFetch'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -20,8 +21,16 @@ export default function Login() {
     try {
       const res = await axios.post(`${API_URL}/api/auth/login`, { username, password })
       login(res.data.token, res.data.role, res.data.username)
-      if (res.data.role === 'admin') navigate('/admin')
-      else navigate('/student')
+      
+      if (res.data.role === 'admin') {
+        // Aggressive prefetch for instant admin experience
+        prefetch(`${API_URL}/api/admin/students`, 'admin-students', res.data.token)
+        prefetch(`${API_URL}/api/admin/exams`, 'admin-exams', res.data.token)
+        prefetch(`${API_URL}/api/admin/results`, 'admin-results', res.data.token)
+        navigate('/admin')
+      } else {
+        navigate('/student')
+      }
     } catch (err) {
       setError('Invalid credentials. Please try again.')
     } finally {

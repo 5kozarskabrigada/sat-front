@@ -19,7 +19,8 @@ interface Student {
 
 export default function StudentRoster() {
   const { token } = useAuthStore()
-  const { data: students, loading, error, isSlow, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'students')
+  // Key matches the one used in Login.tsx prefetch
+  const { data: students, loading, error, isSlow, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'admin-students')
   
   // Modal States
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false)
