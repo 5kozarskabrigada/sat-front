@@ -6,6 +6,22 @@ import { useAuthStore } from '../store/authStore'
 const cache = new Map<string, { data: any, timestamp: number }>()
 const CACHE_DURATION = 60 * 1000 // 1 minute
 
+export const prefetch = async (url: string, key: string, token: string | null) => {
+    if (!token) return
+    if (cache.has(key)) {
+        const cached = cache.get(key)!
+        if (Date.now() - cached.timestamp < CACHE_DURATION) return // Already cached
+    }
+    try {
+        const res = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        cache.set(key, { data: res.data, timestamp: Date.now() })
+    } catch (err) {
+        console.error(`Prefetch failed for ${key}`, err)
+    }
+}
+
 export function useFetch<T>(url: string, key: string) {
     const { token } = useAuthStore()
     // Initialize state from cache synchronously to prevent flicker

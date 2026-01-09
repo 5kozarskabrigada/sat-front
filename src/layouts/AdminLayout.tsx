@@ -1,13 +1,21 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Users, Library, BarChart3, LogOut, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { prefetch } from '../hooks/useFetch'
+import { API_URL } from '../config'
 import clsx from 'clsx'
 
 export default function AdminLayout() {
-  const { logout, username } = useAuthStore()
+  const { logout, username, token } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Prefetch data on mount to hide latency
+  useEffect(() => {
+    prefetch(`${API_URL}/api/admin/students`, 'students', token)
+    prefetch(`${API_URL}/api/admin/exams`, 'exams', token)
+  }, [token])
 
   const handleLogout = () => {
     logout()
