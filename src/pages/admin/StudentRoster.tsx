@@ -265,7 +265,16 @@ export default function StudentRoster() {
                                     </button>
                                 </div>
                             ) : (
-                                <div className="text-xs text-gray-400 italic">Hidden</div>
+                                <button 
+                                    onClick={() => {
+                                        setSelectedStudent(student)
+                                        setIsResetModalOpen(true)
+                                    }}
+                                    className="text-xs text-brand-accent hover:underline font-medium flex items-center gap-1 group"
+                                >
+                                    Reset to View
+                                    <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform" />
+                                </button>
                             )}
                         </td>
                         <td className="px-6 py-4 flex items-center gap-2">
