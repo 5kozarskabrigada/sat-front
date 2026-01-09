@@ -10,7 +10,7 @@ function App() {
         try {
             // Fire and forget - we don't care about the result, just hitting the server
             // Using a non-existent endpoint or a health check is fine, it just needs to hit the API
-            await axios.get(`${API_URL}/api/health`, { timeout: 5000 })
+            await axios.get(`${API_URL}/api/health`, { timeout: 3000 })
         } catch (e) {
             // Ignore errors (e.g. 404), the goal is just to wake the server
         }

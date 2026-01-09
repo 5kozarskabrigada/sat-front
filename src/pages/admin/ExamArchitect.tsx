@@ -47,10 +47,10 @@ export default function ExamArchitect() {
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        fetchExam()
+        fetchStructure()
     }, [examId])
 
-    const fetchExam = async () => {
+    const fetchStructure = async () => {
         setLoading(true)
         setLoadingError(false)
         
@@ -60,10 +60,11 @@ export default function ExamArchitect() {
         }, 15000)
 
         try {
-            const res = await axios.get(`${API_URL}/api/admin/exams/${examId}`, {
+            // Use lightweight structure endpoint for fast initial load
+            const res = await axios.get(`${API_URL}/api/admin/exams/${examId}/structure`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            setExam(res.data)
+            setStructure(res.data) // Assuming backend returns matching shape
             clearTimeout(timeoutId)
         } catch (err) {
             console.error(err)

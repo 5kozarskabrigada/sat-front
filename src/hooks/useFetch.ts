@@ -8,13 +8,24 @@ const CACHE_DURATION = 60 * 1000 // 1 minute
 
 export function useFetch<T>(url: string, key: string) {
     const { token } = useAuthStore()
-    const [data, setData] = useState<T | null>(null)
-    const [loading, setLoading] = useState(true)
+    // Initialize state from cache synchronously to prevent flicker
+    const [data, setData] = useState<T | null>(() => {
+        if (cache.has(key)) {
+            const cached = cache.get(key)!
+            if (Date.now() - cached.timestamp < CACHE_DURATION) {
+                return cached.data
+            }
+        }
+        return null
+    })
+    
+    // Only set loading to true if we didn't get data from cache
+    const [loading, setLoading] = useState(!data)
     const [error, setError] = useState<string | null>(null)
     const [isSlow, setIsSlow] = useState(false)
 
     const fetchData = async (force = false) => {
-        // Check cache first
+        // Check cache first (redundant for initial mount but needed for re-fetches)
         if (!force && cache.has(key)) {
             const cached = cache.get(key)!
             if (Date.now() - cached.timestamp < CACHE_DURATION) {
