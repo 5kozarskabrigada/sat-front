@@ -212,12 +212,12 @@ export default function ExamArchitect() {
                     </button>
                     <div>
                         <input 
-                            value={exam?.title || ''}
+                            value={structure?.title || ''}
                             className="text-lg font-bold text-brand-dark bg-transparent border-none focus:ring-0 p-0 w-64 truncate"
                             readOnly // TODO: Implement Exam Title Edit
                         />
                         <div className="flex items-center gap-2 text-xs text-brand-muted">
-                            <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">CODE: {exam?.code}</span>
+                            <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">CODE: {structure?.code}</span>
                             <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                             <span>Draft</span>
                         </div>
@@ -288,7 +288,7 @@ export default function ExamArchitect() {
                                     )}
                                 >
                                     <span className="font-bold mr-2">Q{idx + 1}</span>
-                                    <span className="opacity-80 truncate">{q.questionText.substring(0, 20)}...</span>
+                                    <span className="opacity-80 truncate">{q.questionTextSnippet}</span>
                                 </button>
                             ))}
                         </div>
