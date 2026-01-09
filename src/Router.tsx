@@ -1,7 +1,11 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
-import AdminDashboard from './pages/admin/Dashboard'
+import AdminLayout from './layouts/AdminLayout'
+import StudentRoster from './pages/admin/StudentRoster'
+import ExamLibrary from './pages/admin/ExamLibrary'
+import ResultsAudit from './pages/admin/ResultsAudit'
+import ExamArchitect from './pages/admin/ExamArchitect'
 import StudentDashboard from './pages/student/Dashboard'
 import ExamInterface from './pages/student/ExamInterface'
 import { useAuthStore } from './store/authStore'
@@ -18,15 +22,26 @@ export default function Router() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        
+        {/* Admin Routes */}
         <Route path="/admin" element={
-          <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
-        } />
+          <ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="roster" replace />} />
+          <Route path="roster" element={<StudentRoster />} />
+          <Route path="library" element={<ExamLibrary />} />
+          <Route path="audit" element={<ResultsAudit />} />
+          <Route path="architect/:examId" element={<ExamArchitect />} />
+        </Route>
+
+        {/* Student Routes */}
         <Route path="/student" element={
           <ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>
         } />
         <Route path="/exam/:examId" element={
           <ProtectedRoute role="student"><ExamInterface /></ProtectedRoute>
         } />
+        
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
