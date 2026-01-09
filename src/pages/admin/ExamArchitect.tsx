@@ -36,6 +36,7 @@ export default function ExamArchitect() {
     
     const [exam, setExam] = useState<ExamDetails | null>(null)
     const [loading, setLoading] = useState(true)
+    const [loadingError, setLoadingError] = useState(false)
     const [activeSection, setActiveSection] = useState<'Reading' | 'Math'>('Reading')
     const [activeModule, setActiveModule] = useState<1 | 2>(1)
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
@@ -50,13 +51,23 @@ export default function ExamArchitect() {
     }, [examId])
 
     const fetchExam = async () => {
+        setLoading(true)
+        setLoadingError(false)
+        
+        // Timeout safeguard
+        const timeoutId = setTimeout(() => {
+            if (loading) setLoadingError(true)
+        }, 15000)
+
         try {
             const res = await axios.get(`${API_URL}/api/admin/exams/${examId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setExam(res.data)
+            clearTimeout(timeoutId)
         } catch (err) {
             console.error(err)
+            setLoadingError(true)
         } finally {
             setLoading(false)
         }
@@ -151,7 +162,27 @@ export default function ExamArchitect() {
         }
     }
 
-    if (loading) return <div className="h-screen flex items-center justify-center">Loading Architect...</div>
+    if (loading) return (
+        <div className="h-screen flex flex-col items-center justify-center gap-4 text-brand-muted">
+            {loadingError ? (
+                <>
+                    <div className="text-red-500 font-bold text-lg">Taking longer than expected...</div>
+                    <p className="text-sm max-w-md text-center">The server is waking up or experiencing heavy load. Please try again.</p>
+                    <button 
+                        onClick={fetchExam}
+                        className="px-6 py-2 bg-brand-accent text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm font-bold flex items-center gap-2"
+                    >
+                        <Settings className="w-4 h-4 animate-spin" /> Retry Connection
+                    </button>
+                </>
+            ) : (
+                <>
+                    <Loader2 className="w-10 h-10 animate-spin text-brand-accent" />
+                    <div className="font-medium animate-pulse">Loading Exam Architect...</div>
+                </>
+            )}
+        </div>
+    )
 
     return (
         <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
