@@ -23,14 +23,14 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-brand-dark">
+    <div className="flex h-screen bg-gray-50 font-sans text-brand-text">
       {/* Sidebar */}
-      <aside className="w-64 bg-brand-dark text-white flex flex-col shrink-0">
-        <div className="h-16 flex items-center px-6 border-b border-white/10">
-          <div className="w-8 h-8 bg-brand-accent rounded-md flex items-center justify-center mr-3 shadow-lg shadow-brand-accent/20">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+        <div className="h-16 flex items-center px-6 border-b border-gray-100">
+          <div className="w-8 h-8 bg-brand-accent rounded-md flex items-center justify-center mr-3 shadow-md shadow-brand-accent/20">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold tracking-tight">Admin Console</span>
+          <span className="font-bold tracking-tight text-brand-text">Admin Console</span>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1">
@@ -38,7 +38,7 @@ export default function AdminLayout() {
             to="/admin/roster"
             className={({ isActive }) => clsx(
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              isActive ? "bg-brand-primary text-white shadow-md" : "text-brand-muted hover:bg-white/5 hover:text-white"
+              isActive ? "bg-brand-secondary text-brand-accent font-bold" : "text-brand-muted hover:bg-gray-50 hover:text-brand-text"
             )}
           >
             <Users className="w-5 h-5" />
@@ -49,7 +49,7 @@ export default function AdminLayout() {
             to="/admin/library"
             className={({ isActive }) => clsx(
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              isActive ? "bg-brand-primary text-white shadow-md" : "text-brand-muted hover:bg-white/5 hover:text-white"
+              isActive ? "bg-brand-secondary text-brand-accent font-bold" : "text-brand-muted hover:bg-gray-50 hover:text-brand-text"
             )}
           >
             <Library className="w-5 h-5" />
@@ -60,7 +60,7 @@ export default function AdminLayout() {
             to="/admin/audit"
             className={({ isActive }) => clsx(
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              isActive ? "bg-brand-primary text-white shadow-md" : "text-brand-muted hover:bg-white/5 hover:text-white"
+              isActive ? "bg-brand-secondary text-brand-accent font-bold" : "text-brand-muted hover:bg-gray-50 hover:text-brand-text"
             )}
           >
             <BarChart3 className="w-5 h-5" />
@@ -68,19 +68,19 @@ export default function AdminLayout() {
           </NavLink>
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-gray-100">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-xs font-bold">
+            <div className="w-8 h-8 rounded-full bg-brand-secondary flex items-center justify-center text-xs font-bold text-brand-text">
               AD
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-white">{username || 'Administrator'}</span>
+              <span className="text-sm font-medium text-brand-text">{username || 'Administrator'}</span>
               <span className="text-xs text-brand-muted">Super User</span>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-red-500/20 text-brand-muted hover:text-red-200 rounded-lg text-sm transition-colors border border-transparent hover:border-red-500/20"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-red-50 text-brand-muted hover:text-red-600 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200"
           >
             <LogOut className="w-4 h-4" />
             Secure Logout
@@ -89,9 +89,9 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm">
-          <h1 className="text-xl font-bold text-brand-dark">{getPageTitle()}</h1>
+          <h1 className="text-xl font-bold text-brand-text">{getPageTitle()}</h1>
           <div id="header-actions"></div> {/* Portal Target for Page Actions */}
         </header>
 

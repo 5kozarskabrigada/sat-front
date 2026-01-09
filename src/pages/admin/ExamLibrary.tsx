@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import axios from 'axios'
 import { API_URL } from '../../config'
 import { useAuthStore } from '../../store/authStore'
-import { Plus, Edit3, Trash2, BookOpen, Search, X } from 'lucide-react'
+import { useFetch } from '../../hooks/useFetch'
+import { Plus, Edit3, Trash2, BookOpen, Search, X, Loader2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
@@ -16,27 +17,9 @@ interface Exam {
 export default function ExamLibrary() {
   const { token } = useAuthStore()
   const navigate = useNavigate()
-  const [exams, setExams] = useState<Exam[]>([])
+  const { data: exams, loading, error, mutate } = useFetch<Exam[]>(`${API_URL}/api/admin/exams`, 'exams')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newExam, setNewExam] = useState({ title: '', code: '' })
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchExams()
-  }, [])
-
-  const fetchExams = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/admin/exams`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setExams(res.data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleCreateExam = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +40,7 @@ export default function ExamLibrary() {
       await axios.delete(`${API_URL}/api/admin/exams/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      fetchExams()
+      mutate() // Refresh list
     } catch (err) {
       console.error(err)
     }
@@ -84,14 +67,19 @@ export default function ExamLibrary() {
       <HeaderActions />
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-            {[1, 2, 3].map(i => (
-                <div key={i} className="h-48 bg-white rounded-xl border border-gray-200"></div>
-            ))}
+        <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+            <p className="text-sm">Loading Exams...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-24 text-red-500">
+            <p className="text-sm font-bold">Failed to load exams.</p>
+            <p className="text-xs">{error}</p>
+            <button onClick={() => mutate()} className="mt-2 text-brand-accent hover:underline text-xs">Try Again</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {exams.map(exam => (
+            {exams?.map(exam => (
                 <div key={exam.id} className="bg-white rounded-xl border border-gray-200 shadow-panel hover:shadow-lg transition-shadow overflow-hidden group">
                     <div className="h-2 bg-brand-primary w-full"></div>
                     <div className="p-6">
@@ -122,7 +110,7 @@ export default function ExamLibrary() {
                 </div>
             ))}
 
-            {exams.length === 0 && (
+            {exams?.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
                     <BookOpen className="w-12 h-12 text-gray-300 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900">No Exams Created</h3>

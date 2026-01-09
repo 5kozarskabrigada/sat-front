@@ -7,20 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        // "Midnight Navy" theme - High Stakes Testing Environment
+        // "Professional" theme - Clean, Neutral, Focused
         brand: {
-          dark: "#001B4D",    // Deep background (Midnight Navy)
-          primary: "#002B7A", // Slightly lighter navy for headers/panels
-          accent: "#007AFF",  // "Bluebook" style blue for active states
-          secondary: "#F5F5F5", // Off-white for text legibility
-          text: "#FFFFFF",
-          muted: "#A0AEC0",
+          dark: "#1A202C",    // Very dark gray/black for high contrast text
+          primary: "#FFFFFF", // White surfaces
+          accent: "#2563EB",  // Royal Blue for primary actions
+          secondary: "#F3F4F6", // Light gray for backgrounds
+          text: "#111827",    // Nearly black for body text
+          muted: "#6B7280",   // Gray for secondary text
+          border: "#E5E7EB",  // Light border color
         },
         // Semantic colors for the exam
         exam: {
-          answered: "#001B4D", // Filled bubble
+          answered: "#2563EB", // Filled bubble (Blue)
           unanswered: "#FFFFFF", // Empty bubble
-          review: "#FFA500", // Orange flag
+          review: "#F59E0B", // Orange flag
           highlight: "#FEF08A", // Annotation highlight
         }
       },

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import axios from 'axios'
 import { API_URL } from '../../config'
 import { useAuthStore } from '../../store/authStore'
-import { Eye, EyeOff, UserPlus, Search, X, Check } from 'lucide-react'
+import { useFetch } from '../../hooks/useFetch'
+import { Eye, EyeOff, UserPlus, Search, X, Check, Loader2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 interface Student {
@@ -10,56 +11,14 @@ interface Student {
   username: string
   role: string
   createdAt: string
-  // For UI state (not from API directly unless we store credentials separately, 
-  // but usually admin creates them and gets them once. 
-  // However, for this simplified mock platform, we might not be able to retrieve passwords 
-  // unless we store them or the API returns them on creation.
-  // The API "GetStudents" usually doesn't return passwords. 
-  // The requirement says "Visibility button... reveals unique password". 
-  // This implies the admin can SEE the password later. 
-  // REAL WORLD: Bad practice. 
-  // MOCK WORLD: We will assume we can't see OLD passwords, only NEW ones upon creation. 
-  // OR, we store them in a separate "StudentCredentials" table for the admin to see.
-  // Let's assume for this session, we only see them upon creation, OR we mock it.
-  // Wait, the prompt says "The Key Column... reveals the student's unique password".
-  // I'll stick to showing a placeholder or "Reset" functionality if real security.
-  // But since the user wants exactly this feature, I will assume the API *should* return it 
-  // OR I will simulate it for the demo. 
-  // Given the backend uses BCrypt, we CANNOT retrieve passwords.
-  // I will implement it such that the "Key" column allows resetting or is only available for newly created students.
-  // actually, let's just show a "Hidden" state and if they click it, maybe we show a "Cannot retrieve" or 
-  // we just simulate it for the sake of the UI demo if it's a mock platform.
-  // Let's go with: Only show for newly created, or show "******" and allow reset.
-  // RE-READING PROMPT: "manage the individuals... reveals the student's unique password".
-  // Okay, I'll store the plain password in the frontend state for *this session* if created, 
-  // but for persistent students, I can't show it. 
-  // I'll add a note in the UI about this security limitation.
 }
 
 export default function StudentRoster() {
   const { token } = useAuthStore()
-  const [students, setStudents] = useState<Student[]>([])
+  const { data: students, loading, error, mutate } = useFetch<Student[]>(`${API_URL}/api/admin/students`, 'students')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newStudentName, setNewStudentName] = useState({ first: '', last: '' })
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchStudents()
-  }, [])
-
-  const fetchStudents = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/admin/students`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setStudents(res.data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +30,7 @@ export default function StudentRoster() {
       })
       setCreatedCredentials(prev => [...prev, ...res.data])
       setNewStudentName({ first: '', last: '' })
-      fetchStudents()
+      mutate() // Refresh list
       setIsModalOpen(false)
     } catch (err) {
       console.error(err)
@@ -102,7 +61,7 @@ export default function StudentRoster() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-panel">
           <div className="text-brand-muted text-xs font-bold uppercase tracking-wider mb-1">Total Enrollment</div>
-          <div className="text-3xl font-bold text-brand-dark">{students.length}</div>
+          <div className="text-3xl font-bold text-brand-dark">{students?.length || 0}</div>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-panel">
           <div className="text-brand-muted text-xs font-bold uppercase tracking-wider mb-1">Active Sessions</div>
@@ -125,21 +84,33 @@ export default function StudentRoster() {
                 />
             </div>
             <div className="text-sm text-brand-muted">
-                Showing all {students.length} students
+                Showing all {students?.length || 0} students
             </div>
         </div>
         
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-brand-muted uppercase tracking-wider">
-              <th className="px-6 py-4">Student ID</th>
-              <th className="px-6 py-4">Username</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Password Key</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {students.map((student) => {
+        {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                <p className="text-sm">Loading Roster...</p>
+            </div>
+        ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-500">
+                <p className="text-sm font-bold">Failed to load students.</p>
+                <p className="text-xs">{error}</p>
+                <button onClick={() => mutate()} className="mt-2 text-brand-accent hover:underline text-xs">Try Again</button>
+            </div>
+        ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-brand-muted uppercase tracking-wider">
+                  <th className="px-6 py-4">Student ID</th>
+                  <th className="px-6 py-4">Username</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Password Key</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {students?.map((student) => {
                 // Check if we just created this student to show the password
                 const creds = createdCredentials.find(c => c.username === student.username)
                 
@@ -176,6 +147,7 @@ export default function StudentRoster() {
             })}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Enrollment Modal */}
