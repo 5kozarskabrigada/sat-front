@@ -3,11 +3,13 @@ import axios from 'axios'
 import { API_URL } from '../../config'
 import { useAuthStore } from '../../store/authStore'
 import { useFetch } from '../../hooks/useFetch'
-import { Eye, EyeOff, UserPlus, Search, X, Check, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, Search, X, Check, Loader2, Edit2, Trash2, RefreshCw } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 interface Student {
   id: string
+  firstName: string
+  lastName: string
   username: string
   role: string
   createdAt: string
@@ -19,6 +21,7 @@ export default function StudentRoster() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newStudentName, setNewStudentName] = useState({ first: '', last: '' })
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([])
+  const [resetCredentials, setResetCredentials] = useState<{id: string, password: string} | null>(null)
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,13 +31,52 @@ export default function StudentRoster() {
       ], {
         headers: { Authorization: `Bearer ${token}` }
       })
+      // Optimistic update
+      const newStudents = res.data.map((creds: any, idx: number) => ({
+          id: `temp-${Date.now()}-${idx}`, // Temp ID until refresh
+          firstName: newStudentName.first,
+          lastName: newStudentName.last,
+          username: creds.username,
+          role: 'student',
+          createdAt: new Date().toISOString()
+      }))
+      // Note: useFetch doesn't support optimistic updates directly without SWR/React Query, 
+      // but we can rely on 'mutate()' to fetch the real data.
       setCreatedCredentials(prev => [...prev, ...res.data])
       setNewStudentName({ first: '', last: '' })
-      mutate() // Refresh list
+      mutate() // Refresh list immediately
       setIsModalOpen(false)
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const handleDelete = async (id: string) => {
+      if (!confirm('Are you sure you want to delete this student? All their exam data will be lost.')) return
+      try {
+          await axios.delete(`${API_URL}/api/admin/students/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+          })
+          mutate()
+      } catch (err) {
+          console.error(err)
+          alert('Failed to delete student')
+      }
+  }
+
+  const handleResetPassword = async (id: string) => {
+      if (!confirm('Regenerate password for this student? The old password will stop working.')) return
+      try {
+          const res = await axios.post(`${API_URL}/api/admin/students/${id}/reset-password`, {}, {
+              headers: { Authorization: `Bearer ${token}` }
+          })
+          setResetCredentials({ id, password: res.data.password })
+          // Auto-hide after 10s
+          setTimeout(() => setResetCredentials(null), 10000)
+      } catch (err) {
+          console.error(err)
+          alert('Failed to reset password')
+      }
   }
 
   // Header Portal for Actions
@@ -103,21 +145,24 @@ export default function StudentRoster() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-brand-muted uppercase tracking-wider">
-                  <th className="px-6 py-4">Student ID</th>
+                  <th className="px-6 py-4">Student</th>
                   <th className="px-6 py-4">Username</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Password Key</th>
+                  <th className="px-6 py-4">Password</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {students?.map((student) => {
                 // Check if we just created this student to show the password
                 const creds = createdCredentials.find(c => c.username === student.username)
+                const resetCreds = resetCredentials?.id === student.id ? resetCredentials : null
                 
                 return (
                     <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm text-gray-500">
-                            {student.id.substring(0, 8)}...
+                        <td className="px-6 py-4">
+                            <div className="font-bold text-brand-dark">{student.firstName} {student.lastName}</div>
+                            <div className="text-xs font-mono text-gray-400">{student.id.substring(0, 8)}...</div>
                         </td>
                         <td className="px-6 py-4 font-medium text-brand-dark">
                             {student.username}
@@ -133,14 +178,32 @@ export default function StudentRoster() {
                                     <span className="font-bold">{creds.password}</span>
                                     <Check className="w-3 h-3" />
                                 </div>
+                            ) : resetCreds ? (
+                                <div className="flex items-center gap-2 text-sm font-mono bg-blue-50 px-2 py-1 rounded border border-blue-200 text-blue-800 w-fit animate-in fade-in zoom-in">
+                                    <span className="font-bold">{resetCreds.password}</span>
+                                    <Check className="w-3 h-3" />
+                                </div>
                             ) : (
                                 <div className="flex items-center gap-2 text-gray-400 italic text-sm">
                                     <span>••••••••</span>
-                                    <button className="hover:text-brand-accent transition-colors" title="Cannot reveal hashed password">
-                                        <EyeOff className="w-4 h-4" />
-                                    </button>
                                 </div>
                             )}
+                        </td>
+                        <td className="px-6 py-4 flex items-center gap-2">
+                            <button 
+                                onClick={() => handleResetPassword(student.id)}
+                                className="p-1.5 text-gray-400 hover:text-brand-accent hover:bg-blue-50 rounded transition-colors"
+                                title="Reset Password"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                            </button>
+                            <button 
+                                onClick={() => handleDelete(student.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Student"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
                         </td>
                     </tr>
                 )
