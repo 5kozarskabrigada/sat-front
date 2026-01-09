@@ -34,7 +34,7 @@ export default function ExamArchitect() {
     const { token } = useAuthStore()
     const navigate = useNavigate()
     
-    const [exam, setExam] = useState<ExamDetails | null>(null)
+    const [structure, setStructure] = useState<ExamStructure | null>(null)
     const [loading, setLoading] = useState(true)
     const [loadingError, setLoadingError] = useState(false)
     const [activeSection, setActiveSection] = useState<'Reading' | 'Math'>('Reading')
@@ -143,7 +143,7 @@ export default function ExamArchitect() {
             await axios.post(`${API_URL}/api/admin/exams/${examId}/questions`, [newQuestion], {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            fetchExam() // Refresh to get the ID
+            fetchStructure() // Refresh to get the ID
         } catch (err) {
             console.error(err)
         }
@@ -170,7 +170,7 @@ export default function ExamArchitect() {
                     <div className="text-red-500 font-bold text-lg">Taking longer than expected...</div>
                     <p className="text-sm max-w-md text-center">The server is waking up or experiencing heavy load. Please try again.</p>
                     <button 
-                        onClick={fetchExam}
+                        onClick={fetchStructure}
                         className="px-6 py-2 bg-brand-accent text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm font-bold flex items-center gap-2"
                     >
                         <Settings className="w-4 h-4 animate-spin" /> Retry Connection
