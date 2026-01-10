@@ -86,3 +86,72 @@ export function useFetch<T>(url: string, key: string) {
 
     return { data, loading, error, isSlow, mutate }
 }
+
+export function usePost() {
+    const { token } = useAuthStore()
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const execute = async (url: string, body: any) => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await axios.post(url, body, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            return res.data
+        } catch (err: any) {
+            setError(err.message || 'Action failed')
+            throw err
+        } finally {
+            setLoading(false)
+        }
+    }
+    return { execute, loading, error }
+}
+
+export function usePut() {
+    const { token } = useAuthStore()
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const execute = async (url: string, body?: any) => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await axios.put(url, body, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            return res.data
+        } catch (err: any) {
+            setError(err.message || 'Action failed')
+            throw err
+        } finally {
+            setLoading(false)
+        }
+    }
+    return { execute, loading, error }
+}
+
+export function useDelete() {
+    const { token } = useAuthStore()
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const execute = async (url: string) => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await axios.delete(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            return res.data
+        } catch (err: any) {
+            setError(err.message || 'Action failed')
+            throw err
+        } finally {
+            setLoading(false)
+        }
+    }
+    return { execute, loading, error }
+}

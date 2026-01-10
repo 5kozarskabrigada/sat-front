@@ -80,7 +80,7 @@ export default function StudentDashboard() {
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        {exam.status === 'in_progress' ? 'In Progress' : 'Ready'}
+                        {exam.status === 'in_progress' ? 'In Progress' : 'Live'}
                       </span>
                     )}
                   </div>
@@ -95,16 +95,23 @@ export default function StudentDashboard() {
                     </div>
                     <div className="flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
-                      <span>High Stakes</span>
+                      <span>Full Mock</span>
                     </div>
                   </div>
 
                   <button 
                     onClick={() => startExam(exam.id)}
-                    className="w-full bg-brand-dark text-white px-4 py-3 rounded-lg font-medium hover:bg-brand-primary transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-brand-accent/20"
+                    disabled={exam.status === 'completed'}
+                    className="w-full bg-brand-dark text-white px-4 py-3 rounded-lg font-medium hover:bg-brand-primary transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-brand-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <PlayCircle className="w-5 h-5" />
-                    {exam.status === 'not_started' ? 'Begin Simulation' : 'Resume Simulation'}
+                    {exam.status === 'completed' ? (
+                        <>Exam Submitted</>
+                    ) : (
+                        <>
+                            <PlayCircle className="w-5 h-5" />
+                            {exam.status === 'not_started' ? 'Begin Simulation' : 'Resume Simulation'}
+                        </>
+                    )}
                   </button>
                 </div>
                 <div className="h-1 w-full bg-brand-secondary">

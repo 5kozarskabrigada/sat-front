@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import AdminLayout from './layouts/AdminLayout'
 import StudentRoster from './pages/admin/StudentRoster'
+import ClassroomManager from './pages/admin/ClassroomManager'
 import ExamLibrary from './pages/admin/ExamLibrary'
 import ResultsAudit from './pages/admin/ResultsAudit'
 import ExamArchitect from './pages/admin/ExamArchitect'
@@ -29,6 +30,7 @@ export default function Router() {
         }>
           <Route index element={<Navigate to="roster" replace />} />
           <Route path="roster" element={<StudentRoster />} />
+          <Route path="classrooms" element={<ClassroomManager />} />
           <Route path="library" element={<ExamLibrary />} />
           <Route path="audit" element={<ResultsAudit />} />
           <Route path="architect/:examId" element={<ExamArchitect />} />

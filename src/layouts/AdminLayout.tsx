@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Users, Library, BarChart3, LogOut, ShieldCheck } from 'lucide-react'
+import { Users, Library, BarChart3, LogOut, ShieldCheck, GraduationCap } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { prefetch } from '../hooks/useFetch'
 import { API_URL } from '../config'
@@ -16,6 +16,7 @@ export default function AdminLayout() {
     prefetch(`${API_URL}/api/admin/students`, 'admin-students', token)
     prefetch(`${API_URL}/api/admin/exams`, 'admin-exams', token)
     prefetch(`${API_URL}/api/admin/results`, 'admin-results', token)
+    prefetch(`${API_URL}/api/admin/classrooms`, 'admin-classrooms', token)
   }, [token])
 
   const handleLogout = () => {
@@ -25,6 +26,7 @@ export default function AdminLayout() {
 
   const getPageTitle = () => {
     if (location.pathname.includes('/admin/roster')) return 'Student Roster'
+    if (location.pathname.includes('/admin/classrooms')) return 'Classrooms'
     if (location.pathname.includes('/admin/library')) return 'Exam Library'
     if (location.pathname.includes('/admin/audit')) return 'Results Audit'
     if (location.pathname.includes('/admin/architect')) return 'Exam Architect'
@@ -52,6 +54,17 @@ export default function AdminLayout() {
           >
             <Users className="w-5 h-5" />
             Student Roster
+          </NavLink>
+
+          <NavLink 
+            to="/admin/classrooms"
+            className={({ isActive }) => clsx(
+              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+              isActive ? "bg-brand-secondary text-brand-accent font-bold" : "text-brand-muted hover:bg-gray-50 hover:text-brand-text"
+            )}
+          >
+            <GraduationCap className="w-5 h-5" />
+            Classrooms
           </NavLink>
           
           <NavLink 
