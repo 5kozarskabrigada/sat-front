@@ -46,10 +46,29 @@ export default function ExamArchitect() {
     const [loadingQuestion, setLoadingQuestion] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
     const [saving, setSaving] = useState(false)
+    const passageRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
         fetchStructure()
     }, [examId])
+
+    // Keyboard Shortcuts & Auto-focus
+    useEffect(() => {
+        if (editorState && passageRef.current) {
+            passageRef.current.focus()
+        }
+    }, [selectedQuestionId])
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault()
+                handleSaveAndNext()
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [editorState, selectedQuestionId, structure, activeSection, activeModule])
 
     const fetchStructure = async () => {
         setLoading(true)
@@ -88,6 +107,24 @@ export default function ExamArchitect() {
     const filteredQuestions = structure?.questions.filter(q => 
         q.section === activeSection && q.module === activeModule
     ) || []
+
+    const handleSaveAndNext = async () => {
+        if (!editorState || !selectedQuestionId) return
+        
+        // 1. Save current
+        await handleSave()
+
+        // 2. Find next question
+        if (!structure) return
+        const currentFiltered = structure.questions.filter(q => 
+            q.section === activeSection && q.module === activeModule
+        )
+        const currentIndex = currentFiltered.findIndex(q => q.id === selectedQuestionId)
+        
+        if (currentIndex !== -1 && currentIndex < currentFiltered.length - 1) {
+            setSelectedQuestionId(currentFiltered[currentIndex + 1].id)
+        }
+    }
 
     const handleSave = async () => {
         if (!editorState || !selectedQuestionId) return

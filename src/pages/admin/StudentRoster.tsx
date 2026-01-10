@@ -6,6 +6,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { Eye, EyeOff, UserPlus, Search, X, Check, Loader2, Edit2, Trash2, RefreshCw } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { ConfirmModal, Modal } from '../../components/Modals'
+import clsx from 'clsx'
 
 interface Student {
   id: string
