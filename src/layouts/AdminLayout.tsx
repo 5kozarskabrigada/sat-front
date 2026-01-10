@@ -15,6 +15,7 @@ export default function AdminLayout() {
   useEffect(() => {
     prefetch(`${API_URL}/api/admin/students`, 'admin-students', token)
     prefetch(`${API_URL}/api/admin/exams`, 'admin-exams', token)
+    prefetch(`${API_URL}/api/admin/results`, 'admin-results', token)
   }, [token])
 
   const handleLogout = () => {
