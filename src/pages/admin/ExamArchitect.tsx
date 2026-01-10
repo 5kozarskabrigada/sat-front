@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { API_URL } from '../../config'
@@ -356,6 +356,7 @@ export default function ExamArchitect() {
                                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Passage</label>
                                             <div className="relative group">
                                                 <textarea 
+                                                    ref={passageRef}
                                                     value={editorState.questionText} // Using same field for now as per plan
                                                     onChange={e => { setEditorState({...editorState, questionText: e.target.value}); setIsDirty(true) }}
                                                     className="w-full min-h-[200px] p-6 bg-white border border-gray-200 rounded-lg text-lg text-slate-800 font-serif leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y transition-shadow shadow-sm group-hover:shadow-md"

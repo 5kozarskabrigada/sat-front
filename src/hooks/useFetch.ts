@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any, timestamp: number }>()
-const CACHE_DURATION = 60 * 1000 // 1 minute
+const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
 
 export const prefetch = async (url: string, key: string, token: string | null) => {
     if (!token) return

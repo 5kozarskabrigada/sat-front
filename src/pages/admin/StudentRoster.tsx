@@ -110,20 +110,22 @@ export default function StudentRoster() {
 
   const handleResetPassword = async () => {
       if (!selectedStudent) return
-      setActionLoading(true)
+      
+      // OPTIMISTIC UI: Close confirm, open success immediately with loading state
+      setIsResetModalOpen(false)
+      setResetCredentials({ id: selectedStudent.id, password: 'Generating...' })
+      setShowPasswordModal(true)
+      
       try {
           const res = await axios.post(`${API_URL}/api/admin/students/${selectedStudent.id}/reset-password`, {}, {
               headers: { Authorization: `Bearer ${token}` }
           })
           setResetCredentials({ id: selectedStudent.id, password: res.data.password })
-          setIsResetModalOpen(false)
-          setShowPasswordModal(true) // Open permanent modal
           mutate() // Refresh in background
       } catch (err) {
           console.error(err)
           alert('Failed to reset password')
-      } finally {
-          setActionLoading(false)
+          setShowPasswordModal(false) // Close if failed
       }
   }
 
@@ -356,7 +358,7 @@ export default function StudentRoster() {
               </p>
               
               <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 flex items-center justify-between">
-                  <span className="font-mono text-lg font-bold text-gray-900 tracking-wide">
+                  <span className={clsx("font-mono text-lg font-bold tracking-wide", resetCredentials?.password === 'Generating...' ? "text-gray-400 animate-pulse" : "text-gray-900")}>
                       {resetCredentials?.password}
                   </span>
                   <button 
