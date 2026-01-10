@@ -20,6 +20,8 @@ interface Question {
     correctAnswer: string
     explanation?: string
     difficulty?: string
+    domain?: string
+    skill?: string
 }
 
 interface ExamStructure {
@@ -69,6 +71,17 @@ export default function ExamArchitect() {
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [editorState, selectedQuestionId, structure, activeSection, activeModule])
+
+    // Auto-save logic
+    useEffect(() => {
+        if (!isDirty || !editorState) return
+        
+        const timer = setTimeout(() => {
+            handleSave()
+        }, 2000) // Auto-save after 2 seconds of inactivity
+
+        return () => clearTimeout(timer)
+    }, [editorState, isDirty])
 
     const fetchStructure = async () => {
         setLoading(true)
@@ -194,6 +207,21 @@ export default function ExamArchitect() {
         } catch (err) {
             console.error(err)
         }
+    }
+
+    const handleMoveQuestion = (id: string, direction: 'up' | 'down') => {
+        if (!structure) return
+        const index = structure.questions.findIndex(q => q.id === id)
+        if (index === -1) return
+        
+        const newQuestions = [...structure.questions]
+        const targetIndex = direction === 'up' ? index - 1 : index + 1
+        
+        if (targetIndex < 0 || targetIndex >= newQuestions.length) return
+        
+        [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]]
+        setStructure({ ...structure, questions: newQuestions })
+        setIsDirty(true)
     }
 
     if (loading) return (
@@ -343,123 +371,204 @@ export default function ExamArchitect() {
 
                     <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-indigo-500 transition-colors" />
 
-                    {/* EDITOR PANEL (CENTER) - WHITE/CLEAN THEME */}
+                    {/* EDITOR PANEL (CENTER) - SPLIT VIEW */}
                     <Panel className="bg-white flex flex-col relative">
                         {editorState ? (
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="max-w-5xl mx-auto p-8 pb-32">
-                                    
-                                    {/* Question Header */}
-                                    <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-4">
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                {/* Editor Header */}
+                                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+                                    <div className="flex items-center gap-4">
                                         <div>
-                                            <h1 className="text-3xl font-extrabold text-slate-900 mb-1">Question {filteredQuestions.findIndex(q => q.id === selectedQuestionId) + 1}</h1>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                            <h1 className="text-xl font-extrabold text-slate-900">Question {filteredQuestions.findIndex(q => q.id === selectedQuestionId) + 1}</h1>
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                 <span>{activeSection}</span>
                                                 <span>•</span>
-                                                <button onClick={handleDeleteQuestion} className="text-red-500 hover:underline">Delete</button>
+                                                <span>Module {activeModule}</span>
                                             </div>
                                         </div>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={handleDeleteQuestion}
+                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Delete Question"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                        <div className="w-px h-6 bg-gray-100 mx-1"></div>
+                                        <button 
+                                            onClick={() => handleMoveQuestion(editorState.id, 'up')}
+                                            disabled={structure?.questions.findIndex(q => q.id === editorState.id) === 0}
+                                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-20"
+                                        >
+                                            <ChevronLeft className="w-4 h-4 rotate-90" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleMoveQuestion(editorState.id, 'down')}
+                                            disabled={structure?.questions.findIndex(q => q.id === editorState.id) === (structure?.questions.length || 0) - 1}
+                                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-20"
+                                        >
+                                            <ChevronLeft className="w-4 h-4 -rotate-90" />
+                                        </button>
+                                    </div>
+                                </div>
 
-                                    {/* Configuration Row */}
-                                    <div className="grid grid-cols-2 gap-6 mb-8">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Domain</label>
-                                            <div className="relative">
-                                                <input 
-                                                    className="w-full p-3 bg-white border border-gray-200 rounded-lg text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                                    placeholder="Information and Ideas"
-                                                    value="Information and Ideas" // Static for UI demo
-                                                    readOnly
-                                                />
-                                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                                    <ChevronLeft className="w-4 h-4 text-gray-400 -rotate-90" />
+                                {/* Split View Editor */}
+                                <div className="flex-1 overflow-hidden">
+                                    <PanelGroup direction="horizontal">
+                                        {/* Passage Side */}
+                                        <Panel defaultSize={50} minSize={30}>
+                                            <div className="h-full flex flex-col p-6 overflow-y-auto border-r border-gray-50 bg-slate-50/30">
+                                                <div className="mb-4">
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Passage / Stimulus</label>
+                                                    <textarea 
+                                                        ref={passageRef}
+                                                        value={editorState.questionText}
+                                                        onChange={e => { setEditorState({...editorState, questionText: e.target.value}); setIsDirty(true) }}
+                                                        className="w-full min-h-[400px] p-6 bg-white border border-gray-200 rounded-xl text-base text-slate-800 font-serif leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none shadow-sm"
+                                                        placeholder="The following text is adapted from..."
+                                                    />
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Skill Focus</label>
-                                            <input 
-                                                className="w-full p-3 bg-white border border-gray-200 rounded-lg text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                                placeholder="e.g. Central Ideas and Details"
-                                                defaultValue="Central Ideas and Details"
-                                            />
-                                        </div>
-                                    </div>
+                                        </Panel>
 
-                                    {/* Content Editor */}
-                                    <div className="space-y-6">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Passage</label>
-                                            <div className="relative group">
-                                                <textarea 
-                                                    ref={passageRef}
-                                                    value={editorState.questionText} // Using same field for now as per plan
-                                                    onChange={e => { setEditorState({...editorState, questionText: e.target.value}); setIsDirty(true) }}
-                                                    className="w-full min-h-[200px] p-6 bg-white border border-gray-200 rounded-lg text-lg text-slate-800 font-serif leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y transition-shadow shadow-sm group-hover:shadow-md"
-                                                    placeholder="The following text is adapted from..."
-                                                />
-                                            </div>
-                                        </div>
+                                        <PanelResizeHandle className="w-1 bg-gray-100 hover:bg-indigo-500 transition-colors" />
 
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Question Text</label>
-                                            <textarea 
-                                                className="w-full h-32 p-4 bg-white border border-gray-200 rounded-lg text-base text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                                                placeholder="Which choice best describes the function of the underlined sentence in the text as a whole?"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Options */}
-                                    <div className="mt-12 space-y-3">
-                                        {editorState.choices.map((choice, idx) => {
-                                            const isCorrect = editorState.correctAnswer === choice
-                                            return (
-                                                <div key={idx} className="group relative">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none z-10">
-                                                        <span className={clsx("font-bold text-sm", isCorrect ? "text-white" : "text-slate-400")}>
-                                                            {String.fromCharCode(65 + idx)}
-                                                        </span>
+                                        {/* Question Side */}
+                                        <Panel defaultSize={50} minSize={30}>
+                                            <div className="h-full flex flex-col p-6 overflow-y-auto space-y-6">
+                                                {/* Meta Info */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Domain</label>
+                                                        <select 
+                                                            value={editorState.domain || 'Information and Ideas'}
+                                                            onChange={e => { setEditorState({...editorState, domain: e.target.value}); setIsDirty(true) }}
+                                                            className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        >
+                                                            <option>Information and Ideas</option>
+                                                            <option>Craft and Structure</option>
+                                                            <option>Expression of Ideas</option>
+                                                            <option>Standard English Conventions</option>
+                                                            <option>Algebra</option>
+                                                            <option>Advanced Math</option>
+                                                            <option>Problem Solving and Data Analysis</option>
+                                                            <option>Geometry and Trigonometry</option>
+                                                        </select>
                                                     </div>
-                                                    <input 
-                                                        value={choice}
-                                                        onChange={e => {
-                                                            const newChoices = [...editorState.choices]
-                                                            newChoices[idx] = e.target.value
-                                                            let newCorrect = editorState.correctAnswer
-                                                            if (isCorrect) newCorrect = e.target.value
-                                                            setEditorState({...editorState, choices: newChoices, correctAnswer: newCorrect})
-                                                            setIsDirty(true)
-                                                        }}
-                                                        className={clsx(
-                                                            "w-full pl-12 pr-4 py-4 rounded-lg border text-sm font-medium transition-all outline-none",
-                                                            isCorrect 
-                                                                ? "bg-slate-900 border-slate-900 text-white shadow-lg transform scale-[1.01]" 
-                                                                : "bg-white border-gray-200 text-slate-600 hover:border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                                        )}
-                                                    />
-                                                    <button 
-                                                        onClick={() => { setEditorState({...editorState, correctAnswer: choice}); setIsDirty(true) }}
-                                                        className="absolute inset-0 w-full h-full cursor-default"
-                                                        style={{ pointerEvents: 'none' }} // Only purely for visual toggling via side click if we wanted
-                                                    />
-                                                    {/* Invisible click handler for selection if we want clicking the box to select it? No, input editing is priority. */}
-                                                    <button 
-                                                        onClick={() => { setEditorState({...editorState, correctAnswer: choice}); setIsDirty(true) }}
-                                                        className={clsx(
-                                                            "absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
-                                                            isCorrect ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600"
-                                                        )}
-                                                        title="Mark as Correct Answer"
-                                                    >
-                                                        <CheckCircle2 className="w-4 h-4" />
-                                                    </button>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Skill</label>
+                                                        <input 
+                                                            value={editorState.skill || ''}
+                                                            onChange={e => { setEditorState({...editorState, skill: e.target.value}); setIsDirty(true) }}
+                                                            className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                                            placeholder="e.g. Central Ideas and Details"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            )
-                                        })}
-                                    </div>
 
+                                                {/* Explanation / Difficulty */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Difficulty</label>
+                                                        <select 
+                                                            value={editorState.difficulty || 'Medium'}
+                                                            onChange={e => { setEditorState({...editorState, difficulty: e.target.value}); setIsDirty(true) }}
+                                                            className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        >
+                                                            <option>Easy</option>
+                                                            <option>Medium</option>
+                                                            <option>Hard</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Explanation</label>
+                                                        <input 
+                                                            value={editorState.explanation || ''}
+                                                            onChange={e => { setEditorState({...editorState, explanation: e.target.value}); setIsDirty(true) }}
+                                                            className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                                            placeholder="Why is this the correct answer?"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Options */}
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Answer Choices</label>
+                                                    <div className="space-y-2.5">
+                                                        {editorState.choices.map((choice, idx) => {
+                                                            const isCorrect = editorState.correctAnswer === choice
+                                                            return (
+                                                                <div key={idx} className="group relative">
+                                                                    <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center pointer-events-none z-10">
+                                                                        <span className={clsx("font-bold text-xs", isCorrect ? "text-indigo-400" : "text-slate-400")}>
+                                                                            {String.fromCharCode(65 + idx)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <input 
+                                                                        value={choice}
+                                                                        onChange={e => {
+                                                                            const newChoices = [...editorState.choices]
+                                                                            newChoices[idx] = e.target.value
+                                                                            let newCorrect = editorState.correctAnswer
+                                                                            if (isCorrect) newCorrect = e.target.value
+                                                                            setEditorState({...editorState, choices: newChoices, correctAnswer: newCorrect})
+                                                                            setIsDirty(true)
+                                                                        }}
+                                                                        className={clsx(
+                                                                            "w-full pl-10 pr-10 py-3 rounded-xl border text-sm font-medium transition-all outline-none",
+                                                                            isCorrect 
+                                                                                ? "bg-indigo-50/50 border-indigo-200 text-indigo-900 shadow-sm" 
+                                                                                : "bg-white border-gray-200 text-slate-600 hover:border-gray-300 focus:border-indigo-500"
+                                                                        )}
+                                                                    />
+                                                                    <button 
+                                                                        onClick={() => { setEditorState({...editorState, correctAnswer: choice}); setIsDirty(true) }}
+                                                                        className={clsx(
+                                                                            "absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity",
+                                                                            isCorrect ? "opacity-100 bg-indigo-600 text-white" : "bg-gray-100 text-gray-400 hover:bg-green-500 hover:text-white"
+                                                                        )}
+                                                                        title="Mark as Correct"
+                                                                    >
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Panel>
+                                    </PanelGroup>
+                                </div>
+
+                                {/* Editor Footer Navigation */}
+                                <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-between items-center shrink-0">
+                                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                                        <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-[10px]">Ctrl</kbd>
+                                        <span>+</span>
+                                        <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-[10px]">Enter</kbd>
+                                        <span className="ml-1">Save & Next</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                const currentFiltered = filteredQuestions
+                                                const idx = currentFiltered.findIndex(q => q.id === selectedQuestionId)
+                                                if (idx > 0) setSelectedQuestionId(currentFiltered[idx - 1].id)
+                                            }}
+                                            disabled={filteredQuestions.findIndex(q => q.id === selectedQuestionId) === 0}
+                                            className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-30"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button 
+                                            onClick={handleSaveAndNext}
+                                            className="px-6 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all shadow-md shadow-slate-900/10"
+                                        >
+                                            Next Question
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
