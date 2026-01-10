@@ -11,20 +11,6 @@ import {
 import clsx from 'clsx'
 
 // Types
-interface QuestionSummary {
-    id: string
-    section: string
-    module: number
-    questionTextSnippet: string
-}
-
-interface ExamStructure {
-    id: string
-    title: string
-    code: string
-    questions: QuestionSummary[]
-}
-
 interface Question {
     id: string
     section: string
@@ -34,6 +20,13 @@ interface Question {
     correctAnswer: string
     explanation?: string
     difficulty?: string
+}
+
+interface ExamStructure {
+    id: string
+    title: string
+    code: string
+    questions: Question[]
 }
 
 export default function ExamArchitect() {
@@ -77,30 +70,19 @@ export default function ExamArchitect() {
         }
     }
 
-    // Load question details when selected
+    // Load question details from local state when selected
     useEffect(() => {
-        if (!selectedQuestionId) {
+        if (!selectedQuestionId || !structure) {
             setEditorState(null)
             return
         }
 
-        const fetchQuestion = async () => {
-            setLoadingQuestion(true)
-            try {
-                const res = await axios.get(`${API_URL}/api/admin/questions/${selectedQuestionId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                setEditorState(res.data)
-                setIsDirty(false)
-            } catch (err) {
-                console.error(err)
-                alert('Failed to load question details')
-            } finally {
-                setLoadingQuestion(false)
-            }
+        const question = structure.questions.find(q => q.id === selectedQuestionId)
+        if (question) {
+            setEditorState(question)
+            setIsDirty(false)
         }
-        fetchQuestion()
-    }, [selectedQuestionId])
+    }, [selectedQuestionId, structure]) // Added structure dependency so updates reflect immediately
 
     // Filter questions for the hierarchy
     const filteredQuestions = structure?.questions.filter(q => 
@@ -111,15 +93,12 @@ export default function ExamArchitect() {
         if (!editorState || !selectedQuestionId) return
         setSaving(true)
         try {
-            // Optimistic update of the snippet in the sidebar
+            // Optimistic update of the full question in local state
             setStructure(prev => {
                 if (!prev) return null
                 return {
                     ...prev,
-                    questions: prev.questions.map(q => q.id === selectedQuestionId ? {
-                        ...q, 
-                        questionTextSnippet: editorState.questionText.substring(0, 50) + (editorState.questionText.length > 50 ? "..." : "")
-                    } : q)
+                    questions: prev.questions.map(q => q.id === selectedQuestionId ? editorState : q)
                 }
             })
 
@@ -311,7 +290,7 @@ export default function ExamArchitect() {
                                     <div className="flex justify-between items-center mb-1">
                                         <span className={clsx("font-bold text-xs", selectedQuestionId === q.id ? "text-indigo-400" : "text-slate-500")}>Q{idx + 1}</span>
                                     </div>
-                                    <div className="truncate text-xs opacity-80 font-serif">{q.questionTextSnippet || "New Question..."}</div>
+                                    <div className="truncate text-xs opacity-80 font-serif">{q.questionText.substring(0, 50) || "New Question..."}</div>
                                 </button>
                             ))}
                             
